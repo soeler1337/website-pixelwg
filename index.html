@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pixel WG Dashboard</title>
+  <link rel="icon" type="image/png" href="pwg.png" />
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+
+  <!-- Public config (Supabase URL + anon key) -->
+  <script src="config.public.js"></script>
+
+  <!-- Supabase JS (UMD) -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
+
+  <!-- App scripts -->
+  <script src="streamer-config.js?v=1.0.0" defer></script>
+  <script src="script.js?v=1.0.0" defer></script>
+
+  <link rel="stylesheet" href="style.css?v=1.0.0" />
+</head>
+
+<body>
+  <nav class="top-nav" aria-label="Hauptnavigation">
+    <a class="nav-brand" href="#/">
+      <img src="pwg.png" alt="Pixel WG" class="nav-logo" />
+      <span class="sr-only">Pixel WG</span>
+    </a>
+    <div class="nav-links">
+      <a href="#/" data-nav>Home</a>
+      <a href="#/members" data-nav>Mitglieder</a>
+      <a href="#/wiki" data-nav>Wissensdatenbank</a>
+      <a href="#/profile" data-nav>Profil <span class="nav-badge" id="nav-auth-badge"></span></a>
+    </div>
+  </nav>
+
+  <main>
+    <!-- HOME -->
+    <section data-view="home">
+      <div class="home-header">
+        <h1>Pixel WG <span class="live">LIVE</span> Status</h1>
+      </div>
+
+      <!-- Live carousel -->
+      <div id="live-carousel" class="live-carousel" hidden>
+        <div class="live-carousel-header">
+          <h2>Jetzt live</h2>
+          <div class="live-carousel-controls" aria-label="Karussell Navigation">
+            <button class="carousel-btn" type="button" id="live-prev" aria-label="Zurück">‹</button>
+            <button class="carousel-btn" type="button" id="live-next" aria-label="Weiter">›</button>
+          </div>
+        </div>
+        <div class="live-carousel-track" id="live-carousel-track" role="list"></div>
+      </div>
+	  <div class="button-row-home">
+          <button onclick="showPopup()">Streams auswählen & lurken</button>
+      </div>
+    </section>
+	
+    <!-- MEMBERS -->
+    <section data-view="members" hidden>
+      <div class="page-card">
+        <div class="page-card-header">
+          <h2>Streamer-Liste</h2>
+          <div class="page-actions">
+            <button type="button" onclick="loadStatus()">Aktualisieren</button>
+            <button type="button" class="btn-secondary" onclick="filterRDW()">RDW</button>
+            <button type="button" class="btn-secondary" onclick="clearRDWFilter()">Alle</button>
+          </div>
+        </div>
+
+        <input type="text" id="searchInput" class="home-search" placeholder="Suche nach Name, Titel oder Spiel…" onkeyup="filterTable()">
+
+        <div class="table-wrapper">
+          <table id="streamTable">
+            <thead>
+              <tr>
+                <th onclick="sortTable(0)">Status</th>
+                <th onclick="sortTable(1)">Name</th>
+                <th onclick="sortTable(2)">Stream-Titel</th>
+                <th onclick="sortTable(3)">Kategorie</th>
+                <th onclick="sortTable(4)">RDW</th>
+                <th>Link</th>
+              </tr>
+            </thead>
+            <tbody id="streamer-table">
+              <tr><td colspan="6">Bitte aktualisieren…</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="page-card">
+        <h2>Mitglieder</h2>
+        <p class="muted">Öffentlich sichtbar sind nur freigeschaltete Mitglieder.</p>
+        <div id="members-grid" class="member-grid"></div>
+        <div class="notice" id="members-login-hint" hidden>
+          <b>Mitmachen?</b> Logge dich im Profil mit Twitch ein. Du bleibst erstmal <i>pending</i> und wirst dann von uns freigeschaltet.
+        </div>
+      </div>
+
+      <div class="page-card" id="admin-panel" hidden>
+        <h2>Admin</h2>
+        <div class="admin-grid">
+          <div>
+            <h3>Pending Anfragen</h3>
+            <div id="admin-pending"></div>
+          </div>
+          <div>
+            <h3>Whitelist</h3>
+            <form id="whitelist-form" class="inline-form">
+              <input id="whitelist-login" type="text" placeholder="twitch_login (z.B. soeler1337)" />
+              <button type="submit">Hinzufügen</button>
+            </form>
+            <div id="admin-whitelist"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- WIKI -->
+    <section data-view="wiki" hidden>
+      <div class="page-card">
+        <h2>Creator Wissensdatenbank</h2>
+        <p class="muted">Coming soon – hier kommen Guides zu OBS, Stream-Setup, Tipps & Templates rein.</p>
+        <div class="kb-grid">
+          <div class="kb-card">
+            <h3>OBS Basics</h3>
+            <p>Scenes, Sources, Audio, Output – kompakt erklärt.</p>
+          </div>
+          <div class="kb-card">
+            <h3>Audio-Setup</h3>
+            <p>Filter, Gain Staging, Noise Gate – ohne “warum klingt das so?”</p>
+          </div>
+          <div class="kb-card">
+            <h3>Clips & Highlights</h3>
+            <p>Workflow, Hotkeys, Tools – schnell zu Shorts.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- PROFILE -->
+    <section data-view="profile" hidden>
+      <div class="page-card">
+        <h2>Profil</h2>
+
+        <div id="auth-loading" class="muted">Lade Login-Status…</div>
+
+        <div id="auth-logged-out" hidden>
+          <p>Du bist nicht eingeloggt.</p>
+          <button id="btn-login" type="button">Mit Twitch einloggen</button>
+          <p class="muted small">
+            Hinweis: Nach dem Login bist du ggf. erstmal <b>pending</b>, bis du freigeschaltet wirst.
+          </p>
+        </div>
+
+        <div id="auth-logged-in" hidden>
+          <div class="profile-head">
+            <div class="avatar" id="profile-avatar"></div>
+            <div>
+              <div class="profile-title">
+                <b id="profile-name">—</b>
+                <span class="pill" id="profile-status">—</span>
+                <span class="pill" id="profile-role" hidden>—</span>
+              </div>
+              <div class="muted small" id="profile-login">—</div>
+            </div>
+          </div>
+
+          <div class="button-row">
+            <button id="btn-logout" type="button">Logout</button>
+            <a class="live-link" id="btn-open-twitch" href="#" target="_blank" rel="noopener">Twitch öffnen</a>
+          </div>
+
+          <div id="profile-pending" class="notice" hidden>
+            <b>Du bist noch nicht freigeschaltet.</b> Sobald du approved bist, kannst du hier Socials & Streamplan pflegen.
+          </div>
+
+          <div id="profile-approved" hidden>
+			  <div class="profile-grid">
+				<section class="panel">
+				  <div class="panel-head">
+					<h3>Bio</h3>
+					<div class="muted small">max. 300 Zeichen</div>
+				  </div>
+
+				  <form id="bio-form" class="stack">
+					<textarea id="bio-input" rows="4" maxlength="300"
+					  placeholder="Kurz was zu dir… (max 300 Zeichen)"></textarea>
+					<div class="button-row">
+					  <button type="submit" class="btn-primary">Bio speichern</button>
+					  <div class="muted small" id="bio-hint"></div>
+					</div>
+				  </form>
+				</section>
+
+				<section class="panel">
+				  <div class="panel-head">
+					<h3>Social Links</h3>
+					<div class="muted small">Links zu deinen Kanälen</div>
+				  </div>
+
+				  <form id="social-form" class="inline-form">
+					<select id="social-platform">
+					  <option value="youtube">YouTube</option>
+					  <option value="instagram">Instagram</option>
+					  <option value="tiktok">TikTok</option>
+					  <option value="discord">Discord</option>
+					  <option value="x">X / Twitter</option>
+					  <option value="website">Website</option>
+					</select>
+					<input id="social-url" type="url" placeholder="https://…" />
+					<button type="submit" class="btn-secondary">Speichern</button>
+				  </form>
+
+				  <div id="social-list" class="list"></div>
+				</section>
+
+				<section class="panel panel--wide">
+				  <div class="panel-head">
+					<h3>Streamplan</h3>
+					<div class="muted small">Zeiten & Notiz</div>
+				  </div>
+
+				  <form id="schedule-form" class="schedule-form">
+					<select id="schedule-weekday">
+					  <option value="1">Montag</option>
+					  <option value="2">Dienstag</option>
+					  <option value="3">Mittwoch</option>
+					  <option value="4">Donnerstag</option>
+					  <option value="5">Freitag</option>
+					  <option value="6">Samstag</option>
+					  <option value="0">Sonntag</option>
+					</select>
+					<input id="schedule-start" type="time" />
+					<input id="schedule-end" type="time" />
+					<input id="schedule-notes" type="text" placeholder="Optional: Format/Notiz" />
+					<button type="submit" class="btn-secondary">Hinzufügen</button>
+				  </form>
+
+				  <div id="schedule-list" class="list"></div>
+				</section>
+			  </div>
+			</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- AUTH RETURN -->
+    <section data-view="auth" hidden>
+      <div class="page-card">
+        <h2>Login…</h2>
+        <p class="muted">Einen Moment – wir schließen den Twitch Login ab.</p>
+      </div>
+    </section>
+
+
+  <!-- Streamer Detail Modal -->
+  <div id="member-modal" class="modal-overlay" hidden>
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="member-modal-title">
+      <div class="modal-header">
+        <div class="modal-title" id="member-modal-title">Streamer</div>
+        <button type="button" class="modal-close" id="member-modal-close" aria-label="Schließen">×</button>
+      </div>
+      <div class="modal-body" id="member-modal-body">
+        <div class="muted">Lade…</div>
+      </div>
+    </div>
+  </div>
+  </main>
+
+  <footer class="footer">
+    <div>© <span id="footer-year"></span> Pixel WG </div>
+    <div class="small">
+      <a href="https://soeler.com" target="_blank" rel="noopener">Soeler</a>
+      • <a href="#/wiki">Wissensdatenbank</a>
+      • <a href="#/members">Mitglieder</a>
+    </div>
+  </footer>
+  <script>
+    (function(){ var y=document.getElementById('footer-year'); if(y) y.textContent = new Date().getFullYear(); })();
+  </script>
+</body>
+</html>
