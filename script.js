@@ -1,6 +1,6 @@
 /* BubbleFam SPA + Live Dashboard + Supabase Auth (Twitch) */
 
-const SITE_ID = "pixelwg"; // später auf der anderen Seite einfach zu "pixelwg" ändern
+const SITE_ID = window.APP_CONFIG?.SITE_ID || "unknown";
 
 let allStreams = [];
 let liveAvatarMap = {};
