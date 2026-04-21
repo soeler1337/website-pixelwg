@@ -561,7 +561,7 @@ function socialMeta(platform, url) {
 }
 
 async function openMemberModal(login) {
-  login = String(login || "").toLowerCase();	
+  login = String(login || "").toLowerCase();
   const overlay = document.getElementById('member-modal');
   const body = document.getElementById('member-modal-body');
   const title = document.getElementById('member-modal-title');
@@ -851,7 +851,7 @@ if (profileError) {
   // NICHT crashen lassen!
   return;
 }
- 
+
 
   // 2) Prüfen, ob für diese Seite schon eine Membership existiert
   const { data: existingMembership, error: membershipReadError } = await sb
@@ -1339,3 +1339,4 @@ window.addEventListener("DOMContentLoaded", async () => {
   if (overlay) overlay.hidden = true;
 });
 });
+
